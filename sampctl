@@ -1,0 +1,430 @@
+#!/bin/bash
+
+COMMAND=$1
+SERVER_NAME=$2
+
+. /etc/sampctl.conf
+
+echo $SAMP_BINARY
+echo $SAMP_PROCESS_OWNER
+echo $SAMP_PROCESS_GROUP
+echo $RELEASES_BASE_DIRECTORY
+echo $SERVER_BASE_DIRECTORY
+echo $PID_DIRECTORY
+
+#
+# Check Config variables
+#
+
+function print_sampctl_example {
+    echo "Example sampctl.conf: "
+    echo ""
+    echo "SERVER_BASE_DIRECTORY=/var/sampctl/servers/"
+    echo "SAMP_BINARY=samp03svr"
+    echo "SAMP_PROCESS_OWNER=samprunner"
+    echo "SAMP_PROCESS_GROUP=samprunner"
+    echo "RELEASES_BASE_DIRECTORY=/var/sampctl/releases/"
+    echo "PID_DIRECTORY=/var/sampctl/run/"
+    exit 1
+
+}
+if [ ! -d "$RELEASES_BASE_DIRECTORY" ]
+then
+    echo "ERROR: cannot find $RELEASES_BASE_DIRECTORY specified in /etc/sampctl.conf, or RELEASES_BASE_DIRECTORY is no directory"
+    print_sampctl_example
+    exit 1
+fi
+
+if [ ! -d "$SERVER_BASE_DIRECTORY" ]
+then
+    echo "ERROR: cannot find $SERVER_BASE_DIRECTORY specified in /etc/sampctl.conf, or SERVER_BASE_DIRECTORY is no directory"
+    print_sampctl_example
+    exit 1
+fi
+
+if [ ! -d "$PID_DIRECTORY" ]
+then
+    echo "ERROR: cannot find $PID_DIRECTORY specified in /etc/sampctl.conf, or PID_DIRECTORY is no directory"
+    print_sampctl_example
+    exit 1
+fi
+
+if [ -z "$SAMP_BINARY" ]
+then
+    echo "ERROR: the variable SAMP_BINARY in /etc/sampctl.conf cannot be empty"
+    print_sampctl_example
+    exit 1
+fi
+
+if [ -z "$SAMP_PROCESS_OWNER" ]
+then
+    echo "ERROR: the variable SAMP_PROCESS_OWNER in /etc/sampctl.conf cannot be empty"
+    print_sampctl_example
+    exit 1
+fi
+
+if [ -z "$SAMP_PROCESS_GROUP" ]
+then
+    echo "ERROR: the variable SAMP_PROCESS_GROUP in /etc/sampctl.conf cannot be empty"
+    print_sampctl_example
+    exit 1
+fi
+
+#
+# Mandatory tools: wget, tar, readlink, dirname, basename
+#
+
+if [ -z `which wget` ]
+then
+    echo "ERROR: please install wget to use sampctl"
+    exit 1
+fi
+
+if [ -z `which tar` ]
+then
+    echo "ERROR: please install tar to use sampctl"
+    exit 1
+fi
+
+if [ -z `which readlink` ]
+then
+    echo "ERROR: please install readlink to use sampctl"
+    exit 1
+fi
+
+if [ -z `which dirname` ]
+then
+    echo "ERROR: please install dirname to use sampctl"
+    exit 1
+fi
+
+if [ -z `which basename` ]
+then
+    echo "ERROR: please install basename to use sampctl"
+    exit 1
+fi
+
+#
+# functions
+#
+
+function samp_uninstall_release {
+    RELEASE_NAME=$1
+
+    echo "uninstalling $RELEASE_NAME"
+
+    if [ ! -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
+    then
+        echo "ERROR: release $RELEASE_NAME is not installed"
+        exit 1
+    fi
+
+    echo " - checking if no server is running on this release"
+
+    ls $SERVER_BASE_DIRECTORY | while read SERVER_NAME
+    do
+        THAT_SERVERS_BINARY_PATH=`readlink "$SERVER_BASE_DIRECTORY$SERVER_NAME/$SAMP_BINARY"`
+        RELEASE_DIRECTORY=`dirname $THAT_SERVERS_BINARY_PATH`
+
+        if [ "`basename $RELEASE_DIRECTORY`" == "$RELEASE_NAME" ]
+        then
+            echo "ERROR: release is in use by server $SERVER_NAME"
+            exit 1
+        fi
+    done
+
+    echo " - removing release directory"
+
+    rm -rf $RELEASES_BASE_DIRECTORY/$RELEASE_NAME
+
+    echo "done!"
+
+    exit 1
+}
+
+function samp_install_release {
+    RELEASE_NAME=$1
+    RELEASE_FILE_NAME=$RELEASE_NAME.tar.gz
+
+    if [ -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
+    then
+        echo "ERROR: release $RELEASE_NAME is already installed"
+        exit 1
+    fi
+
+    BEFORE_DIRECTORY=`pwd`
+
+    if [ -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
+    then
+        echo "ERROR: release $RELEASE_NAME is already installed"
+        exit 1
+    fi
+
+    echo "installing $RELEASE_NAME from files.sa-mp.com"
+    mkdir /tmp/tmp_dir_for_$RELEASE_NAME
+    cd /tmp/tmp_dir_for_$RELEASE_NAME
+    wget --quiet "http://files.sa-mp.com/$RELEASE_NAME.tar.gz" -O "$RELEASE_FILE_NAME"
+
+    if [ "$?" != "0" ]
+    then
+        echo "download of $RELEASE_FILE_NAME failed!"
+        exit 1
+    fi
+
+    tar -zxf $RELEASE_FILE_NAME
+
+    rm $RELEASE_FILE_NAME
+
+    mv * $RELEASES_BASE_DIRECTORY/$RELEASE_NAME
+
+    rmdir /tmp/tmp_dir_for_$RELEASE_NAME
+
+    cd $BEFORE_DIRECTORY
+
+    echo "done!"
+
+    exit 0
+}
+
+
+function samp_list_remote_releases {
+    echo "Available releases: ([x] means, it's installed)"
+    wget --quiet "http://files.sa-mp.com/" -O - | tr -s '"' "\n" | grep '.tar.gz$' | sed 's/.tar.gz//g' | while read RELEASE_NAME
+    do
+        if [ -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
+        then
+            echo "[x] $RELEASE_NAME"
+        else
+            echo "[ ] $RELEASE_NAME"
+        fi
+    done
+
+    exit 0
+}
+
+function samp_list_releases {
+    echo "Installed releases:"
+    ls $RELEASES_BASE_DIRECTORY | while read RELEASE_NAME
+    do
+        echo "[x] $RELEASE_NAME"
+    done
+
+    exit 0
+}
+
+function samp_list_servers {
+    echo "Servers:"
+    ls $SERVER_BASE_DIRECTORY | while read SERVER_NAME
+    do
+        SERVER_ANNOUNCE_PATH=`readlink "$SERVER_BASE_DIRECTORY$SERVER_NAME/$SAMP_BINARY"`
+        RELEASE_DIRECTORY=`dirname $SERVER_ANNOUNCE_PATH`
+        echo "- $SERVER_NAME (`basename $RELEASE_DIRECTORY`)"
+    done
+}
+
+function samp_create_server {
+    SERVER_NAME=$1
+    RELEASE_NAME=$2
+    PORT=$3
+    RCON_PASSWORD=$4
+
+	echo "Creating server: $SERVER_NAME with release: $RELEASE_NAME"
+
+    if [ ! -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
+    then
+        echo "ERROR: release $RELEASE_NAME is not installed"
+        exit 1
+    fi
+
+    if [ -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
+    then
+        echo "ERROR: server $SERVER_NAME already exists"
+        exit 1
+    fi
+
+    mkdir  "$SERVER_BASE_DIRECTORY/$SERVER_NAME"
+
+    for FOLDER_NAME in scriptfiles gamemodes filterscripts npcmodes include
+    do
+        mkdir  "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$FOLDER_NAME"
+        chown $SAMP_PROCESS_OWNER "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$FOLDER_NAME"
+        chgrp $SAMP_PROCESS_GROUP "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$FOLDER_NAME"
+    done
+
+    touch  "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
+    chown $SAMP_PROCESS_OWNER "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
+    chgrp $SAMP_PROCESS_GROUP "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
+
+    SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/server.cfg"
+
+    cat $RELEASES_BASE_DIRECTORY/$RELEASE_NAME/server.cfg | grep -v "^rcon_password " | grep -v "^port " > $SERVER_CONFIG
+
+    echo "port $PORT" >> $SERVER_CONFIG
+    echo "rcon_password $RCON_PASSWORD" >> $SERVER_CONFIG
+
+    echo "Created. Port $PORT, with RCON password: $RCON_PASSWORD"
+	echo " done!"
+	exit 0
+}
+
+function samp_delete_server {
+    SERVER_NAME=$1
+
+    if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
+    then
+        echo "ERROR: server $SERVER_NAME does not exist"
+        exit 1
+    fi
+
+    echo "Deleting server $SERVER_NAME"
+
+    rm -rf "$SERVER_BASE_DIRECTORY/$SERVER_NAME"
+
+    echo "done!"
+    exit 0
+}
+
+function samp_switch_release {
+    SERVER_NAME=$1
+    RELEASE_NAME=$2
+
+	echo "Switching server: $SERVER_NAME to release: $RELEASE_NAME"
+
+    if [ ! -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
+    then
+        echo "ERROR: release $RELEASE_NAME is not installed"
+        exit 1
+    fi
+
+    for SYM_LINK in announce samp03svr samp-npc
+    do
+        if [ -f "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$SYM_LINK" ]
+        then
+            echo " - removing old symlink $SYM_LINK"
+            rm "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$SYM_LINK"
+        fi
+        echo " - creating symlink $SYM_LINK"
+        ln -s  "$RELEASES_BASE_DIRECTORY$RELEASE_NAME/$SYM_LINK" "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$SYM_LINK"
+    done
+
+	echo " done!"
+	exit 0
+}
+
+function samp_stop_server {
+    SERVER_NAME=$1
+
+    if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
+    then
+        echo "ERROR: server $SERVER_NAME does not exist"
+        exit 1
+    fi
+
+	echo -n "Stopping $SERVER_NAME: (pid file at $PID_FILE) ... "
+	start-stop-daemon -v --retry 1 -m --pidfile $PID_FILE --stop --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY > /dev/null
+	echo " done!"
+	exit 0
+}
+
+function samp_start_server {
+    SERVER_NAME=$1
+
+    if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
+    then
+        echo "ERROR: server $SERVER_NAME does not exist"
+        exit 1
+    fi
+
+	echo -n "Starting $SERVER_NAME: (pid file at $PID_FILE) ... "
+	start-stop-daemon -v --background -m --pidfile $PID_FILE --start --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY > /dev/null
+	echo " done!"
+	exit 0
+}
+
+function samp_server_status {
+    SERVER_NAME=$1
+
+    if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
+    then
+        echo "ERROR: server $SERVER_NAME does not exist"
+        exit 1
+    fi
+
+	echo -n "Status $SERVER_NAME: Checking pid file at $PID_FILE ... "
+
+	if [ -f $PID_FILE ]
+	then
+		pid=`cat $PID_FILE`
+	    start-stop-daemon -v --status -m --pidfile $PID_FILE --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY
+
+        if [ "$?" == "0" ]
+        then
+            echo "running at $pid!"
+            exit 0
+        fi
+	fi
+
+	echo "Not running"
+	exit 1
+}
+
+case "$COMMAND" in
+    "uninstall-release")
+        samp_uninstall_release $2
+        exit $?
+        ;;
+    "install-release")
+        samp_install_release $2
+        exit $?
+        ;;
+    "list-remote-releases")
+        samp_list_remote_releases
+        exit $?
+        ;;
+    "list-releases")
+        samp_list_releases
+        exit $?
+        ;;
+    "list-servers")
+        samp_list_servers
+        exit $?
+        ;;
+    "create-server")
+        samp_create_server $2 $3 $4 $5
+        samp_switch_release $2 $3 $4 $5
+        exit $?
+        ;;
+    "switch-release")
+        samp_switch_release $2 $3
+        exit $?
+        ;;
+    "delete-server")
+        samp_delete_server $2
+        exit $?
+        ;;
+    "stop-server")
+        samp_stop_server $2
+        exit $?
+        ;;
+    "restart-server")
+        samp_stop_server $2
+        samp_start_server $2
+        exit $?
+        ;;
+    "start-server")
+        samp_start_server $2
+        exit $?
+        ;;
+    "server-status")
+        samp_server_status $2
+        exit $?
+        ;;
+    "--version")
+        echo "sampctl 0.1-dev by DracoBlue"
+        exit $?
+        ;;
+esac
+
+echo "Unsupported COMMAND: $COMMAND"
+
+exit 1
