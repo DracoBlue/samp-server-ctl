@@ -2,15 +2,7 @@
 
 COMMAND=$1
 SERVER_NAME=$2
-
-. /etc/sampctl.conf
-
-echo $SAMP_BINARY
-echo $SAMP_PROCESS_OWNER
-echo $SAMP_PROCESS_GROUP
-echo $RELEASES_BASE_DIRECTORY
-echo $SERVER_BASE_DIRECTORY
-echo $PID_DIRECTORY
+CONFIG_FILE_NAME=/etc/sampctl.conf
 
 #
 # Check Config variables
@@ -26,46 +18,78 @@ function print_sampctl_example {
     echo "RELEASES_BASE_DIRECTORY=/var/sampctl/releases/"
     echo "PID_DIRECTORY=/var/sampctl/run/"
     exit 1
-
 }
+
+if [ "$COMMAND" == "--version" ]
+then
+    echo "sampctl 0.1-dev by DracoBlue"
+
+    if [ -f "$CONFIG_FILE_NAME" ]
+    then
+        . $CONFIG_FILE_NAME
+        echo "  config ($CONFIG_FILE_NAME):"
+        echo "    SAMP_BINARY = $SAMP_BINARY"
+        echo "    SAMP_PROCESS_OWNER = $SAMP_PROCESS_OWNER"
+        echo "    SAMP_PROCESS_GROUP = $SAMP_PROCESS_GROUP"
+        echo "    RELEASES_BASE_DIRECTORY = $RELEASES_BASE_DIRECTORY"
+        echo "    SERVER_BASE_DIRECTORY = $SERVER_BASE_DIRECTORY"
+        echo "    PID_DIRECTORY = $PID_DIRECTORY"
+    else
+        echo "  config ($CONFIG_FILE_NAME):"
+        echo "    ERROR: does not exist"
+    fi
+    exit 0
+fi
+
+if [ ! -f "$CONFIG_FILE_NAME" ]
+then
+    echo "ERROR: $CONFIG_FILE_NAME is missing."
+    echo ""
+    print_sampctl_example
+    exit 1
+fi
+
+. $CONFIG_FILE_NAME
+
+
 if [ ! -d "$RELEASES_BASE_DIRECTORY" ]
 then
-    echo "ERROR: cannot find $RELEASES_BASE_DIRECTORY specified in /etc/sampctl.conf, or RELEASES_BASE_DIRECTORY is no directory"
+    echo "ERROR: cannot find $RELEASES_BASE_DIRECTORY specified in $CONFIG_FILE_NAME, or RELEASES_BASE_DIRECTORY is no directory"
     print_sampctl_example
     exit 1
 fi
 
 if [ ! -d "$SERVER_BASE_DIRECTORY" ]
 then
-    echo "ERROR: cannot find $SERVER_BASE_DIRECTORY specified in /etc/sampctl.conf, or SERVER_BASE_DIRECTORY is no directory"
+    echo "ERROR: cannot find $SERVER_BASE_DIRECTORY specified in $CONFIG_FILE_NAME, or SERVER_BASE_DIRECTORY is no directory"
     print_sampctl_example
     exit 1
 fi
 
 if [ ! -d "$PID_DIRECTORY" ]
 then
-    echo "ERROR: cannot find $PID_DIRECTORY specified in /etc/sampctl.conf, or PID_DIRECTORY is no directory"
+    echo "ERROR: cannot find $PID_DIRECTORY specified in $CONFIG_FILE_NAME, or PID_DIRECTORY is no directory"
     print_sampctl_example
     exit 1
 fi
 
 if [ -z "$SAMP_BINARY" ]
 then
-    echo "ERROR: the variable SAMP_BINARY in /etc/sampctl.conf cannot be empty"
+    echo "ERROR: the variable SAMP_BINARY in $CONFIG_FILE_NAME cannot be empty"
     print_sampctl_example
     exit 1
 fi
 
 if [ -z "$SAMP_PROCESS_OWNER" ]
 then
-    echo "ERROR: the variable SAMP_PROCESS_OWNER in /etc/sampctl.conf cannot be empty"
+    echo "ERROR: the variable SAMP_PROCESS_OWNER in $CONFIG_FILE_NAME cannot be empty"
     print_sampctl_example
     exit 1
 fi
 
 if [ -z "$SAMP_PROCESS_GROUP" ]
 then
-    echo "ERROR: the variable SAMP_PROCESS_GROUP in /etc/sampctl.conf cannot be empty"
+    echo "ERROR: the variable SAMP_PROCESS_GROUP in $CONFIG_FILE_NAME cannot be empty"
     print_sampctl_example
     exit 1
 fi
@@ -222,6 +246,33 @@ function samp_list_servers {
     done
 }
 
+function samp_rebuild_server_config {
+    SERVER_NAME=$1
+
+    DEFAULT_SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/default.server.cfg"
+
+    if [ ! -f "$DEFAULT_SERVER_CONFIG" ]
+    then
+        exit 0
+    fi
+
+    SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/server.cfg"
+    TEMP_SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/temp1.server.cfg"
+
+    cp $SERVER_CONFIG $TEMP_SERVER_CONFIG
+
+    for KEY in `cat $SERVER_BASE_DIRECTORY/$SERVER_NAME/default.server.cfg | cut -f '1' -d ' '`
+    do
+        cat $SERVER_CONFIG | grep -v "^$KEY " > $TEMP_SERVER_CONFIG
+        mv $TEMP_SERVER_CONFIG $SERVER_CONFIG
+    done
+
+    cat $DEFAULT_SERVER_CONFIG >> $SERVER_CONFIG
+
+    chown $SAMP_PROCESS_OWNER $SERVER_CONFIG
+    chgrp $SAMP_PROCESS_GROUP $SERVER_CONFIG
+}
+
 function samp_create_server {
     SERVER_NAME=$1
     RELEASE_NAME=$2
@@ -255,12 +306,16 @@ function samp_create_server {
     chown $SAMP_PROCESS_OWNER "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
     chgrp $SAMP_PROCESS_GROUP "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
 
+    DEFAULT_SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/server.cfg"
     SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/server.cfg"
 
-    cat $RELEASES_BASE_DIRECTORY/$RELEASE_NAME/server.cfg | grep -v "^rcon_password " | grep -v "^port " > $SERVER_CONFIG
+    echo -n "" > $DEFAULT_SERVER_CONFIG
+    echo "port $PORT" >> $DEFAULT_SERVER_CONFIG
+    echo "rcon_password $RCON_PASSWORD" >> $DEFAULT_SERVER_CONFIG
 
-    echo "port $PORT" >> $SERVER_CONFIG
-    echo "rcon_password $RCON_PASSWORD" >> $SERVER_CONFIG
+    cat $RELEASES_BASE_DIRECTORY/$RELEASE_NAME/server.cfg > $SERVER_CONFIG
+
+    samp_rebuild_server_config $SERVER_NAME
 
     echo "Created. Port $PORT, with RCON password: $RCON_PASSWORD"
 	echo " done!"
@@ -313,6 +368,7 @@ function samp_switch_release {
 
 function samp_stop_server {
     SERVER_NAME=$1
+    PID_FILE=${PID_DIRECTORY}${SERVER_NAME}.pid
 
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
@@ -328,6 +384,7 @@ function samp_stop_server {
 
 function samp_start_server {
     SERVER_NAME=$1
+    PID_FILE=${PID_DIRECTORY}${SERVER_NAME}.pid
 
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
@@ -343,6 +400,7 @@ function samp_start_server {
 
 function samp_server_status {
     SERVER_NAME=$1
+    PID_FILE=${PID_DIRECTORY}${SERVER_NAME}.pid
 
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
@@ -398,6 +456,10 @@ case "$COMMAND" in
         samp_switch_release $2 $3
         exit $?
         ;;
+    "rebuild-server-config")
+        samp_rebuild_server_config $2
+        exit $?
+        ;;
     "delete-server")
         samp_delete_server $2
         exit $?
@@ -408,19 +470,17 @@ case "$COMMAND" in
         ;;
     "restart-server")
         samp_stop_server $2
+        samp_rebuild_server_config $2
         samp_start_server $2
         exit $?
         ;;
     "start-server")
+        samp_rebuild_server_config $2
         samp_start_server $2
         exit $?
         ;;
     "server-status")
         samp_server_status $2
-        exit $?
-        ;;
-    "--version")
-        echo "sampctl 0.1-dev by DracoBlue"
         exit $?
         ;;
 esac

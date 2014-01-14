@@ -110,12 +110,32 @@ Will create a new server and symlink the executables of `RELEASE_NAME`'s `samp03
 
 The newly created server will live at `$SERVER_BASE_DIRECTORY/$SERVER_NAME`.
 
+sampctl generates the `default.server.cfg` in the **create-server** commend with the contents:
+
+    rcon_password given rcon password
+    port given port
+
+This will be merged into `server.cfg` automatically whenever the server is (re)started and when invoking the **rebuild-server-config** command manually.
+
 ### delete-server `SERVER_NAME`
 
 Will remove the server at `$SERVER_BASE_DIRECTORY/$SERVER_NAME` from the filesystem.
 
+### rebuild-server-config `SERVER_NAME`
+
+Will replace (or append) all keys from `$SERVER_BASE_DIRECTORY/$SERVER_NAME/default.server.cfg` in the corresponding `server.cfg`.
+
+The command will be automatically executed before the server is started or restarted.
+
+sampctl generates the `default.server.cfg` in the **create-server** commend with the contents:
+
+    rcon_password given rcon password
+    port given port
+
 ## Changelog
 
+- added logic to write/update port+rcon_password (from `default.server.cfg` on server start/restart
+- added print for sampctl config with `--version`
 - initial release (runs on linux like ubuntu)
 
 ## License
