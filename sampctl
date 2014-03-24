@@ -140,7 +140,7 @@ function samp_uninstall_release {
     if [ ! -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
     then
         echo "ERROR: release $RELEASE_NAME is not installed"
-        exit 1
+        return 1
     fi
 
     echo " - checking if no server is running on this release"
@@ -153,7 +153,7 @@ function samp_uninstall_release {
         if [ "`basename $RELEASE_DIRECTORY`" == "$RELEASE_NAME" ]
         then
             echo "ERROR: release is in use by server $SERVER_NAME"
-            exit 1
+            return 1
         fi
     done
 
@@ -163,7 +163,7 @@ function samp_uninstall_release {
 
     echo "done!"
 
-    exit 1
+    return 1
 }
 
 function samp_install_release {
@@ -173,7 +173,7 @@ function samp_install_release {
     if [ -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
     then
         echo "ERROR: release $RELEASE_NAME is already installed"
-        exit 1
+        return 1
     fi
 
     BEFORE_DIRECTORY=`pwd`
@@ -181,7 +181,7 @@ function samp_install_release {
     if [ -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
     then
         echo "ERROR: release $RELEASE_NAME is already installed"
-        exit 1
+        return 1
     fi
 
     echo "installing $RELEASE_NAME from files.sa-mp.com"
@@ -192,7 +192,7 @@ function samp_install_release {
     if [ "$?" != "0" ]
     then
         echo "download of $RELEASE_FILE_NAME failed!"
-        exit 1
+        return 1
     fi
 
     tar -zxf $RELEASE_FILE_NAME
@@ -207,7 +207,7 @@ function samp_install_release {
 
     echo "done!"
 
-    exit 0
+    return 0
 }
 
 
@@ -223,7 +223,7 @@ function samp_list_remote_releases {
         fi
     done
 
-    exit 0
+    return 0
 }
 
 function samp_list_releases {
@@ -233,7 +233,7 @@ function samp_list_releases {
         echo "[x] $RELEASE_NAME"
     done
 
-    exit 0
+    return 0
 }
 
 function samp_list_servers {
@@ -253,7 +253,7 @@ function samp_rebuild_server_config {
 
     if [ ! -f "$DEFAULT_SERVER_CONFIG" ]
     then
-        exit 0
+        return 0
     fi
 
     SERVER_CONFIG="$SERVER_BASE_DIRECTORY/$SERVER_NAME/server.cfg"
@@ -284,13 +284,13 @@ function samp_create_server {
     if [ ! -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
     then
         echo "ERROR: release $RELEASE_NAME is not installed"
-        exit 1
+        return 1
     fi
 
     if [ -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
         echo "ERROR: server $SERVER_NAME already exists"
-        exit 1
+        return 1
     fi
 
     mkdir  "$SERVER_BASE_DIRECTORY/$SERVER_NAME"
@@ -301,6 +301,7 @@ function samp_create_server {
         chown $SAMP_PROCESS_OWNER "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$FOLDER_NAME"
         chgrp $SAMP_PROCESS_GROUP "$SERVER_BASE_DIRECTORY/$SERVER_NAME/$FOLDER_NAME"
     done
+
 
     touch  "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
     chown $SAMP_PROCESS_OWNER "$SERVER_BASE_DIRECTORY/$SERVER_NAME/server_log.txt"
@@ -319,7 +320,7 @@ function samp_create_server {
 
     echo "Created. Port $PORT, with RCON password: $RCON_PASSWORD"
 	echo " done!"
-	exit 0
+	return 0
 }
 
 function samp_delete_server {
@@ -328,7 +329,7 @@ function samp_delete_server {
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
         echo "ERROR: server $SERVER_NAME does not exist"
-        exit 1
+        return 1
     fi
 
     echo "Deleting server $SERVER_NAME"
@@ -336,7 +337,7 @@ function samp_delete_server {
     rm -rf "$SERVER_BASE_DIRECTORY/$SERVER_NAME"
 
     echo "done!"
-    exit 0
+    return 0
 }
 
 function samp_switch_release {
@@ -348,7 +349,7 @@ function samp_switch_release {
     if [ ! -d "$RELEASES_BASE_DIRECTORY/$RELEASE_NAME" ]
     then
         echo "ERROR: release $RELEASE_NAME is not installed"
-        exit 1
+        return 1
     fi
 
     for SYM_LINK in announce samp03svr samp-npc
@@ -363,7 +364,7 @@ function samp_switch_release {
     done
 
 	echo " done!"
-	exit 0
+	return 0
 }
 
 function samp_stop_server {
@@ -373,13 +374,13 @@ function samp_stop_server {
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
         echo "ERROR: server $SERVER_NAME does not exist"
-        exit 1
+        return 1
     fi
 
 	echo -n "Stopping $SERVER_NAME: (pid file at $PID_FILE) ... "
 	start-stop-daemon -v --retry 1 -m --pidfile $PID_FILE --stop --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY > /dev/null
 	echo " done!"
-	exit 0
+	return 0
 }
 
 function samp_start_server {
@@ -389,13 +390,13 @@ function samp_start_server {
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
         echo "ERROR: server $SERVER_NAME does not exist"
-        exit 1
+        return 1
     fi
 
 	echo -n "Starting $SERVER_NAME: (pid file at $PID_FILE) ... "
 	start-stop-daemon -v --background -m --pidfile $PID_FILE --start --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY > /dev/null
 	echo " done!"
-	exit 0
+	return 0
 }
 
 function samp_server_status {
@@ -405,7 +406,7 @@ function samp_server_status {
     if [ ! -d "$SERVER_BASE_DIRECTORY/$SERVER_NAME" ]
     then
         echo "ERROR: server $SERVER_NAME does not exist"
-        exit 1
+        return 1
     fi
 
 	echo -n "Status $SERVER_NAME: Checking pid file at $PID_FILE ... "
@@ -418,12 +419,12 @@ function samp_server_status {
         if [ "$?" == "0" ]
         then
             echo "running at $pid!"
-            exit 0
+            return 0
         fi
 	fi
 
 	echo "Not running"
-	exit 1
+	return 1
 }
 
 case "$COMMAND" in

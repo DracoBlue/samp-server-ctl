@@ -1,0 +1,3 @@
+language: c
+install: mkdir /home/vagrant/servers && mkdir /home/vagrant/releases && mkdir /home/vagrant/run && sudo cp .travis/sampctl.conf /etc/sampctl.conf
+script: "make test"

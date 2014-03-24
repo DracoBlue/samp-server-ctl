@@ -1,6 +1,7 @@
 # sampctl
 
 * Latest Release: [![GitHub version](https://badge.fury.io/gh/DracoBlue%2Fsampctl.png)](https://github.com/DracoBlue/sampctl/releases)
+* Build-Status: [![Build Status](https://travis-ci.org/DracoBlue/sampctl.png?branch=master)](https://travis-ci.org/DracoBlue/sampctl)
 * Official Site: http://dracoblue.net/
 
 sampctl is copyright 2014 by DracoBlue http://dracoblue.net
