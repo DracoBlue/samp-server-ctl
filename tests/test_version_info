@@ -1,0 +1,10 @@
+#!/bin/bash
+
+TEXT_WITH_VERSION=`../sampctl --version | grep "sampctl.conf"`
+
+if [ -z "$TEXT_WITH_VERSION" ]
+then
+    exit 1
+fi
+
+exit 0
