@@ -163,7 +163,7 @@ function samp_uninstall_release {
 
     echo "done!"
 
-    return 1
+    return 0
 }
 
 function samp_install_release {
