@@ -1,7 +1,6 @@
 # sampctl
 
-* Version: 0.1-dev
-* Date: not yet released
+* Latest Release: [![GitHub version](https://badge.fury.io/gh/DracoBlue%2Fsampctl.png)](https://github.com/DracoBlue/sampctl/releases)
 * Official Site: http://dracoblue.net/
 
 sampctl is copyright 2014 by DracoBlue http://dracoblue.net
@@ -16,6 +15,41 @@ sampctl is a tool to do the following things:
 * run samp servers with different linux users
 * manage multiple samp releases for the servers
 * install new releases for samp servers
+
+## Usage with extra user and sudo
+
+Add a new user called `samprunner` (should be `adduser samprunner` on most linux distributions).
+
+Set `SAMP_PROCESS_OWNER` + `SAMP_PROCESS_GROUP` to `samprunner` in your `/etc/sampctl.conf`.
+
+It's important that `scriptfiles`, `gamemodes`, `filterscripts`, `npcmodes` and `server_log.txt` (and eventually `server.cfg`) is writable by the user. That's why `chown` them to `samprunner`. 
+
+All other files might belong to root (samp) or any other user you want.
+
+You usually don't want to give the server process full root access.
+
+That's why create a file called `/etc/sudoers.d/samprunner` and
+put the contents:
+
+``` bash
+sampbin ALL = (ALL) NOPASSWD: /home/sampbin/www/bin/control_server
+```
+
+Make sure the file belong only to root and are chmod'ed to `0440`.
+
+Afterwards it's possible to run sampctl without root rights and without a password:
+
+``` console
+$ sudo sampctl list-remote-releases
+```
+
+should display all available releases.
+
+Of course you might now also control servers:
+
+``` console
+$ sudo sampctl start-server hans
+```
 
 ## Structure
 
@@ -140,6 +174,6 @@ sampctl generates the `default.server.cfg` in the **create-server** commend with
 
 ## License
 
-sampctl is licensed under the terms of MIT. See LICENSE for more information.
+sampctl is licensed under the terms of MIT. See `LICENSE.md` for more information.
 
 

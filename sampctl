@@ -22,7 +22,7 @@ function print_sampctl_example {
 
 if [ "$COMMAND" == "--version" ]
 then
-    echo "sampctl 0.1-dev by DracoBlue"
+    echo "sampctl 1.0-dev by DracoBlue"
 
     if [ -f "$CONFIG_FILE_NAME" ]
     then
