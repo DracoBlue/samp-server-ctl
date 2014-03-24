@@ -4,7 +4,7 @@ UNINSTALL_RELEASE_AFTERWARDS=0
 
 TEXT_WITH_INSTALLED_RELEASE=`../sampctl list-releases | grep '[x] samp03xsvr_R2_patch1'`
 
-if [ -z "TEXT_WITH_INSTALLED_RELEASE" ]
+if [ -z "$TEXT_WITH_INSTALLED_RELEASE" ]
 then
     ../sampctl install-release samp03xsvr_R2_patch1 > /dev/null
     if [ "$?" != 0 ]
