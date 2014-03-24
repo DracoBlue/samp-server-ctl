@@ -166,10 +166,21 @@ sampctl generates the `default.server.cfg` in the **create-server** commend with
     rcon_password given rcon password
     port given port
 
+## Run tests
+
+The tool ships with some tests. They expect a proper `/etc/sampctl.conf` to be set up. Additionally they create two servers:
+**ernie** and **bert** and will remove them afterwards. If you have servers with this name: don't execute the tests! :)
+
+    $ make test
+    Running:
+     - test_server_creation [ok]
+    Successful tests: 1 / 1
+
 ## Changelog
 
 * dev
-  - added logic to write/update port+rcon_password (from `default.server.cfg` on server start/restart
+  - added info how to run the tests
+  - added logic to write/update port+rcon_password (from `default.server.cfg` on sever start/restart
   - added print for sampctl config with `--version`
   - initial release (runs on linux like ubuntu)
 
