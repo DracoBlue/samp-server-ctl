@@ -4,6 +4,7 @@ TEXT_WITH_VERSION=`../sampctl --version | grep "sampctl.conf"`
 
 if [ -z "$TEXT_WITH_VERSION" ]
 then
+    echo "Cannot find sampctl.conf info in sampctl with --version command!" >&2
     exit 1
 fi
 

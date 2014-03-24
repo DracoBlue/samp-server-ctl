@@ -12,7 +12,11 @@ do
   if [ ! -z "$line" ];
   then
     echo -n " - $line" >&2
-    ./$line
+    if [ -f message.txt ]
+    then
+      rm message.txt
+    fi
+    ./$line 2>message.txt
     if [ "$?" == 0 ]
     then
       let "SUCCESSFUL_TESTS += 1"
@@ -20,6 +24,15 @@ do
     else
       let "FAILED_TESTS += 1"
       echo " [fail]" >&2
+    fi
+    if [ -f message.txt ]
+    then
+      if [ ! -z "`cat message.txt`" ]
+      then
+        echo -n "    "
+        cat message.txt
+      fi
+      rm message.txt
     fi
     let "TOTAL_TESTS += 1"
   fi

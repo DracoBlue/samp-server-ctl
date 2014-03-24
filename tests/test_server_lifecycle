@@ -2,13 +2,14 @@
 
 UNINSTALL_RELEASE_AFTERWARDS=0
 
-TEXT_WITH_INSTALLED_RELEASE=`../sampctl list-releases | grep '[x] samp03xsvr_R2_patch1'`
+TEXT_WITH_INSTALLED_RELEASE=`../sampctl list-releases | grep '\[x\] samp03xsvr_R2_patch1'`
 
 if [ -z "$TEXT_WITH_INSTALLED_RELEASE" ]
 then
     ../sampctl install-release samp03xsvr_R2_patch1 > /dev/null
     if [ "$?" != 0 ]
     then
+        echo "Cannot install release samp03xsvr_R2_patch1!" >&2
         exit 1
     fi
     let "UNINSTALL_RELEASE_AFTERWARDS = 1"
@@ -18,18 +19,21 @@ TEXT_WITH_VERSION=`../sampctl list-servers | grep "^- ernie"`
 
 if [ ! -z "$TEXT_WITH_VERSION" ]
 then
+    echo "The server ernie is already installed!" >&2
     exit 1
 fi
 
 ../sampctl create-server ernie samp03xsvr_R2_patch1 45678 thisisfortestingonly > /dev/null
 if [ "$?" != 0 ]
 then
+    echo "Cannot create the server!" >&2
     exit 1
 fi
 
 ../sampctl delete-server ernie > /dev/null
 if [ "$?" != 0 ]
 then
+    echo "Cannot delete the server!" >&2
     exit 1
 fi
 
@@ -38,6 +42,7 @@ then
     ../sampctl uninstall-release samp03xsvr_R2_patch1 > /dev/null
     if [ "$?" != 0 ]
     then
+        echo "Cannot remove the release after installation!" >&2
         exit 1
     fi
 fi
