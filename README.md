@@ -168,9 +168,10 @@ sampctl generates the `default.server.cfg` in the **create-server** commend with
 
 ## Changelog
 
-- added logic to write/update port+rcon_password (from `default.server.cfg` on server start/restart
-- added print for sampctl config with `--version`
-- initial release (runs on linux like ubuntu)
+* dev
+  - added logic to write/update port+rcon_password (from `default.server.cfg` on server start/restart
+  - added print for sampctl config with `--version`
+  - initial release (runs on linux like ubuntu)
 
 ## License
 
