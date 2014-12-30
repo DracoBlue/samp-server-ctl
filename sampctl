@@ -378,7 +378,7 @@ function samp_stop_server {
     fi
 
 	echo -n "Stopping $SERVER_NAME: (pid file at $PID_FILE) ... "
-	start-stop-daemon -v --retry 1 -m --pidfile $PID_FILE --stop --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY > /dev/null
+	start-stop-daemon -v --retry 1 -m --pidfile $PID_FILE --stop --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME/$SAMP_BINARY > /dev/null
 	echo " done!"
 	return 0
 }
@@ -394,7 +394,7 @@ function samp_start_server {
     fi
 
 	echo -n "Starting $SERVER_NAME: (pid file at $PID_FILE) ... "
-	start-stop-daemon -v --background -m --pidfile $PID_FILE --start --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY > /dev/null
+	start-stop-daemon -v --background -m --pidfile $PID_FILE --start --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME/$SAMP_BINARY > /dev/null
 	echo " done!"
 	return 0
 }
@@ -414,7 +414,7 @@ function samp_server_status {
 	if [ -f $PID_FILE ]
 	then
 		pid=`cat $PID_FILE`
-	    start-stop-daemon -v --status -m --pidfile $PID_FILE --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME$SAMP_BINARY
+	    start-stop-daemon -v --status -m --pidfile $PID_FILE --chuid $SAMP_PROCESS_OWNER --chdir $SERVER_BASE_DIRECTORY$SERVER_NAME --exec $SERVER_BASE_DIRECTORY$SERVER_NAME/$SAMP_BINARY
 
         if [ "$?" == "0" ]
         then
