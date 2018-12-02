@@ -1,16 +1,16 @@
-# sampctl
+# samp-server-ctl
 
 * Latest Release: [![GitHub version](https://badge.fury.io/gh/DracoBlue%2Fsampctl.png)](https://github.com/DracoBlue/sampctl/releases)
 * Build-Status: [![Build Status](https://travis-ci.org/DracoBlue/sampctl.png?branch=master)](https://travis-ci.org/DracoBlue/sampctl)
 * Official Site: http://dracoblue.net/
 
-sampctl is copyright 2014 by DracoBlue http://dracoblue.net
+samp-server-ctl is copyright 2014 by DracoBlue http://dracoblue.net
 
-## What is sampctl?
+## What is samp-server-ctl?
 
 If you are hosting multiple samp servers on one linux machine, you want to run them in a safe environment and might want to control them with a php/bash/whatever script.
 
-sampctl is a tool to do the following things:
+samp-server-ctl is a tool to do the following things:
 
 * start/stop samp servers
 * run samp servers with different linux users
